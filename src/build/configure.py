@@ -136,7 +136,7 @@ wr.variable("cpuflags", "-mcpu=cortex-m4 -mthumb -mlittle-endian -mfpu=fpv4-sp-d
 wr.variable("optflags", "-O3 -fdata-sections -ffunction-sections -fsingle-precision-constant")
 wr.variable("debugflags", "-g")
 wr.variable("cflags", "$cpuflags $debugflags $optflags -std=c99 $defines $include_paths")
-wr.variable("ldflags", "$cpuflags $debugflags -O3 -T$linkerscript -Wl,--gc-sections -lm")
+wr.variable("ldflags", "$cpuflags $debugflags -O3 -T$linkerscript -Wl,--gc-sections --specs=rdimon.specs -lgcc -lc -lm -lrdimon")
 wr.variable("asflags", "$cpuflags $debugflags")
 
 wr.comment("rules")

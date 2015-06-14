@@ -437,14 +437,18 @@ uint8_t font[] = {
 	0x00, 0x00, 0x00, 0x00, 0x00
 };
 
+uint16_t scroll_y = 0;
+
 int ili9340_putc(char c)
 {
 	uint16_t slot[7 * 5];
 	for(int i = 0; i < 7; ++i)
 		for(int j = 0; j < 5; ++j)
-			slot[i * 5 + j] = ((font[((uint8_t)c) * 5 + j] >> i) & 0x1) ? 0xffff : 0x0000;
+			slot[i * 5 + j] = ((font[((uint8_t)c) * 5 + j] >> i) & 0x1) ? ILI9340_WHITE : ILI9340_BLACK;
 
-	int res = ili9340_bitmap_masked(slot, sizeof(slot), 0x0, ili9340_cursor_x, ili9340_cursor_y, 5, 7);
+	int res = 0;
+	if(c != '\n')
+		res = ili9340_bitmap(slot, sizeof(slot), ili9340_cursor_x, ili9340_cursor_y, 5, 7);
 
 	ili9340_cursor_x += 6;
 
@@ -452,11 +456,19 @@ int ili9340_putc(char c)
 	{
 		ili9340_cursor_x = 0;
 		ili9340_cursor_y += 8;
-	}
 
-	if(ili9340_cursor_y >= ili9340_height - 7)
-	{
-		ili9340_clr(0);
+		if(ili9340_cursor_y >= ili9340_height - 7)
+		{
+			ili9340_cursor_x = 0;
+			ili9340_cursor_y = 0;
+		}
+
+		for(int i = 0; i < 7; ++i)
+			for(int j = 0; j < 5; ++j)
+				slot[i * 5 + j] = ILI9340_BLACK;
+
+		for(int x = ili9340_cursor_x; x < ili9340_width; x += 6)
+			res = ili9340_bitmap(slot, sizeof(slot), x, ili9340_cursor_y, 5, 7);
 	}
 
 	return res;
