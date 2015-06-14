@@ -10,3 +10,5 @@ stm32_ili9340.h
 stm32_ili9340.c
 spi_conf.c
 spi_conf.h
+stm32_i8086.h
+stm32_i8086.c

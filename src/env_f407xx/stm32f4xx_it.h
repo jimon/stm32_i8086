@@ -1,6 +1,6 @@
 /**
   ******************************************************************************
-  * @file    GPIO/GPIO_EXTI/Inc/stm32f4xx_it.h 
+  * @file    GPIO/GPIO_EXTI/Inc/stm32f4xx_it.h
   * @author  MCD Application Team
   * @version V1.0.1
   * @date    26-February-2014
@@ -41,7 +41,7 @@
 
 #ifdef __cplusplus
  extern "C" {
-#endif 
+#endif
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"

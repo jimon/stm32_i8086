@@ -521,7 +521,7 @@ int ili9340_init(uint8_t rotation, uint8_t inverted)
 	ili9340_pins_init.Pin = ILI9340_CS | ILI9340_RS | ILI9340_DC;
 	ili9340_pins_init.Mode = GPIO_MODE_OUTPUT_PP;
 	ili9340_pins_init.Pull = GPIO_PULLUP;
-	ili9340_pins_init.Speed = GPIO_SPEED_FAST;
+	ili9340_pins_init.Speed = GPIO_SPEED_HIGH;
 	HAL_GPIO_Init(ILI9340_GPIO, &ili9340_pins_init);
 
 	HAL_GPIO_WritePin(ILI9340_GPIO, ILI9340_CS, GPIO_PIN_RESET);

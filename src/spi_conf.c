@@ -4,7 +4,7 @@
   * @author  MCD Application Team
   * @version V1.2.0
   * @date    26-December-2014
-  * @brief   HAL MSP module.    
+  * @brief   HAL MSP module.
   ******************************************************************************
   * @attention
   *
@@ -32,8 +32,8 @@
   * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   *
-  ******************************************************************************  
-  */ 
+  ******************************************************************************
+  */
 
 /* Includes ------------------------------------------------------------------*/
 #include "spi_conf.h"
@@ -59,10 +59,10 @@
   */
 
 /**
-  * @brief SPI MSP Initialization 
-  *        This function configures the hardware resources used in this example: 
+  * @brief SPI MSP Initialization
+  *        This function configures the hardware resources used in this example:
   *           - Peripheral's clock enable
-  *           - Peripheral's GPIO Configuration  
+  *           - Peripheral's GPIO Configuration
   *           - NVIC configuration for SPI interrupt request enable
   * @param hspi: SPI handle pointer
   * @retval None
@@ -70,40 +70,40 @@
 void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
 {
   GPIO_InitTypeDef  GPIO_InitStruct;
-  
+
   /*##-1- Enable peripherals and GPIO Clocks #################################*/
   /* Enable GPIO TX/RX clock */
   SPIx_SCK_GPIO_CLK_ENABLE();
   SPIx_MISO_GPIO_CLK_ENABLE();
   SPIx_MOSI_GPIO_CLK_ENABLE();
   /* Enable SPI clock */
-  SPIx_CLK_ENABLE(); 
-  
-  /*##-2- Configure peripheral GPIO ##########################################*/  
+  SPIx_CLK_ENABLE();
+
+  /*##-2- Configure peripheral GPIO ##########################################*/
   /* SPI SCK GPIO pin configuration  */
   GPIO_InitStruct.Pin       = SPIx_SCK_PIN;
   GPIO_InitStruct.Mode      = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull      = GPIO_PULLUP;
   GPIO_InitStruct.Speed     = GPIO_SPEED_HIGH;
   GPIO_InitStruct.Alternate = SPIx_SCK_AF;
-  
+
   HAL_GPIO_Init(SPIx_SCK_GPIO_PORT, &GPIO_InitStruct);
-    
+
   /* SPI MISO GPIO pin configuration  */
   GPIO_InitStruct.Pin = SPIx_MISO_PIN;
   GPIO_InitStruct.Alternate = SPIx_MISO_AF;
-  
+
   HAL_GPIO_Init(SPIx_MISO_GPIO_PORT, &GPIO_InitStruct);
-  
+
   /* SPI MOSI GPIO pin configuration  */
   GPIO_InitStruct.Pin = SPIx_MOSI_PIN;
   GPIO_InitStruct.Alternate = SPIx_MOSI_AF;
-    
+
   HAL_GPIO_Init(SPIx_MOSI_GPIO_PORT, &GPIO_InitStruct);
 }
 
 /**
-  * @brief SPI MSP De-Initialization 
+  * @brief SPI MSP De-Initialization
   *        This function frees the hardware resources used in this example:
   *          - Disable the Peripheral's clock
   *          - Revert GPIO and NVIC configuration to their default state
@@ -123,7 +123,7 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef *hspi)
   HAL_GPIO_DeInit(SPIx_MISO_GPIO_PORT, SPIx_MISO_PIN);
   /* Configure SPI MOSI as alternate function  */
   HAL_GPIO_DeInit(SPIx_MOSI_GPIO_PORT, SPIx_MOSI_PIN);
- 
+
 }
 
 /**
