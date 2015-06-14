@@ -72,6 +72,10 @@ https://github.com/adafruit/Adafruit_ILI9340
 #define ILI9340_GMCTRN1 0xE1
 
 SPI_HandleTypeDef ili9340_spi;
+uint16_t ili9340_width = ILI9340_TFTWIDTH;
+uint16_t ili9340_height = ILI9340_TFTHEIGHT;
+uint16_t ili9340_cursor_x = 0;
+uint16_t ili9340_cursor_y = 0;
 
 int ili9340_wc(char command)
 {
@@ -106,7 +110,7 @@ void ili9340_set_rect(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1)
 int ili9340_fill_color(uint16_t color)
 {
 	HAL_GPIO_WritePin(ILI9340_GPIO, ILI9340_CS, GPIO_PIN_RESET);
-	ili9340_set_rect(0, 0, 240, 320);
+	ili9340_set_rect(0, 0, ili9340_width, ili9340_height);
 	HAL_GPIO_WritePin(ILI9340_GPIO, ILI9340_DC, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(ILI9340_GPIO, ILI9340_CS, GPIO_PIN_RESET);
 
@@ -114,7 +118,7 @@ int ili9340_fill_color(uint16_t color)
 	for(int i = 0; i < 64; ++i)
 		slot[i] = ((color & 0xff) << 8) | (color >> 8);
 
-	uint32_t bytes_left = 240 * 320 * 2;
+	uint32_t bytes_left = ili9340_width * ili9340_height * 2;
 
 	while(bytes_left)
 	{
@@ -433,42 +437,29 @@ uint8_t font[] = {
 	0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-#define ili9340_cursor_x_init 1
-#define ili9340_cursor_y_init 319
-
-uint16_t ili9340_cursor_x = ili9340_cursor_x_init;
-uint16_t ili9340_cursor_y = ili9340_cursor_y_init;
-
 int ili9340_putc(char c)
 {
-	#if 0
-		uint16_t slot[7 * 5];
-		for(int i = 0; i < 7; ++i)
-			for(int j = 0; j < 5; ++j)
-				slot[i * 5 + j] = ((font[((uint8_t)c) * 5 + j] >> i) & 0x1) ? 0xffff : 0x0000;
-	#else
-		uint16_t slot[7 * 5];
-		for(int i = 0; i < 5; ++i)
-			for(int j = 0; j < 7; ++j)
-				slot[i * 7 + j] = ((font[((uint8_t)c) * 5 + (4 - i)] >> j) & 0x1) ? 0xffff : 0x0000;
+	uint16_t slot[7 * 5];
+	for(int i = 0; i < 7; ++i)
+		for(int j = 0; j < 5; ++j)
+			slot[i * 5 + j] = ((font[((uint8_t)c) * 5 + j] >> i) & 0x1) ? 0xffff : 0x0000;
 
-		int res = ili9340_bitmap_masked(slot, sizeof(slot), 0x0, ili9340_cursor_x, ili9340_cursor_y - 5, 7, 5);
+	int res = ili9340_bitmap_masked(slot, sizeof(slot), 0x0, ili9340_cursor_x, ili9340_cursor_y, 5, 7);
 
-		ili9340_cursor_y -= 6;
+	ili9340_cursor_x += 6;
 
-		if((ili9340_cursor_y < 5) || (c == '\n'))
-		{
-			ili9340_cursor_y = 319;
-			ili9340_cursor_x += 8;
-		}
+	if((ili9340_cursor_x > ili9340_width - 5) || (c == '\n'))
+	{
+		ili9340_cursor_x = 0;
+		ili9340_cursor_y += 8;
+	}
 
-		if(ili9340_cursor_x >= 240)
-		{
-			ili9340_clr(0);
-		}
+	if(ili9340_cursor_y >= ili9340_height - 7)
+	{
+		ili9340_clr(0);
+	}
 
-		return res;
-	#endif
+	return res;
 }
 
 int ili9340_puts(char * str)
@@ -486,18 +477,18 @@ int ili9340_puts(char * str)
 
 int ili9340_clr(uint16_t color)
 {
-	ili9340_cursor_x = ili9340_cursor_x_init;
-	ili9340_cursor_y = ili9340_cursor_y_init;
+	ili9340_cursor_x = 0;
+	ili9340_cursor_y = 0;
 	return ili9340_fill_color(color);
 }
 
-int ili9340_init()
+int ili9340_init(uint8_t rotation, uint8_t inverted)
 {
 	ILI9340_SPI_CLK_ENABLED();
 	ILI9340_GPIO_CLK_ENABLED();
 
 	ili9340_spi.Instance				= ILI9340_SPI;
-	ili9340_spi.Init.BaudRatePrescaler	= SPI_BAUDRATEPRESCALER_4;
+	ili9340_spi.Init.BaudRatePrescaler	= SPI_BAUDRATEPRESCALER_2;
 	ili9340_spi.Init.Direction			= SPI_DIRECTION_2LINES;
 	ili9340_spi.Init.CLKPhase			= SPI_PHASE_1EDGE;
 	ili9340_spi.Init.CLKPolarity		= SPI_POLARITY_LOW;
@@ -589,10 +580,34 @@ int ili9340_init()
 	ili9340_wc(ILI9340_GMCTRN1);
 	ili9340_wd(0x00, 0x0E, 0x14, 0x03, 0x11, 0x07, 0x31, 0xC1, 0x48, 0x08, 0x0F, 0x0C, 0x31, 0x36, 0x0F);
 
-	ili9340_wc(ILI9340_SLPOUT);    //Exit Sleep
+	ili9340_wc(ILI9340_SLPOUT);
 	HAL_Delay(120);
 
-	ili9340_wc(ILI9340_DISPON);    //Display on
+	ili9340_wc(ILI9340_DISPON);
+
+	ili9340_wc(ILI9340_MADCTL);
+	switch(rotation % 4)
+	{
+	default:
+	case 0:
+		ili9340_wd1(ILI9340_MADCTL_MX | ILI9340_MADCTL_BGR);
+		ili9340_width  = ILI9340_TFTWIDTH; ili9340_height = ILI9340_TFTHEIGHT;
+		break;
+	case 1:
+		ili9340_wd1(ILI9340_MADCTL_MV | ILI9340_MADCTL_BGR);
+		ili9340_width  = ILI9340_TFTHEIGHT; ili9340_height = ILI9340_TFTWIDTH;
+		break;
+	case 2:
+		ili9340_wd1(ILI9340_MADCTL_MY | ILI9340_MADCTL_BGR);
+		ili9340_width  = ILI9340_TFTWIDTH; ili9340_height = ILI9340_TFTHEIGHT;
+		break;
+	case 3:
+		ili9340_wd1(ILI9340_MADCTL_MV | ILI9340_MADCTL_MY | ILI9340_MADCTL_MX | ILI9340_MADCTL_BGR);
+		ili9340_width  = ILI9340_TFTHEIGHT; ili9340_height = ILI9340_TFTWIDTH;
+		break;
+	}
+
+	ili9340_wc(inverted ? ILI9340_INVON : ILI9340_INVOFF);
 
 	return 0;
 }

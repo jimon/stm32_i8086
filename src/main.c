@@ -8,7 +8,7 @@ int main(void)
 
 	SystemClock_Config();
 
-	ili9340_init();
+	ili9340_init(3, 0);
 	ili9340_fill_color(ILI9340_BLUE);
 
 	//for(int i = 0; i < 10; ++i)
@@ -28,7 +28,7 @@ int main(void)
 
 		ili9340_putc('0' + rand()%10);
 
-		BSP_LED_Toggle(LED3);
+		//BSP_LED_Toggle(LED3);
 		//BSP_LED_Toggle(LED4);
 		//BSP_LED_Toggle(LED5);
 		//BSP_LED_Toggle(LED6);

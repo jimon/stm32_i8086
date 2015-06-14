@@ -29,5 +29,5 @@ int ili9340_putc(char c);
 int ili9340_puts(char * str);
 int ili9340_clr(uint16_t color);
 
-int ili9340_init();
+int ili9340_init(uint8_t rotation, uint8_t inverted);
 
