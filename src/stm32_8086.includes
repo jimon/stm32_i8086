@@ -1,0 +1,9 @@
+.
+env_f407xx
+C:\work\stm32_8086\src\env_f407xx
+C:\work\stm32\STM32Cube_FW_F4_V1.4.0\Drivers\STM32F4xx_HAL_Driver\Inc
+C:\work\stm32\STM32Cube_FW_F4_V1.4.0\Drivers\CMSIS\Include
+C:\work\stm32_8086\src -IC:\work\stm32\STM32Cube_FW_F4_V1.4.0\Drivers
+C:\work\stm32\STM32Cube_FW_F4_V1.4.0\Drivers\STM32F4xx_HAL_Driver\Inc\Legacy
+C:\work\stm32\STM32Cube_FW_F4_V1.4.0\Drivers\BSP\STM32F4-Discovery
+C:\work\stm32\STM32Cube_FW_F4_V1.4.0\Drivers\CMSIS\Device\ST\STM32F4xx\Include

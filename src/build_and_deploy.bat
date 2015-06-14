@@ -1,0 +1,1 @@
+build\ninja.exe -C build_temp

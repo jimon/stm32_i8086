@@ -1,0 +1,26 @@
+#pragma once
+
+#include <stdint.h>
+#include "spi_conf.h"
+
+#define ILI9340_SPI					SPIx
+#define ILI9340_SPI_CLK_ENABLED		SPIx_CLK_ENABLE
+#define ILI9340_GPIO				GPIOB
+#define ILI9340_GPIO_CLK_ENABLED	__HAL_RCC_GPIOB_CLK_ENABLE
+#define ILI9340_CS					GPIO_PIN_10
+#define ILI9340_RS					GPIO_PIN_11
+#define ILI9340_DC					GPIO_PIN_12
+
+// Color definitions
+#define	ILI9340_BLACK   0x0000
+#define	ILI9340_BLUE    0x001F
+#define	ILI9340_RED     0xF800
+#define	ILI9340_GREEN   0x07E0
+#define ILI9340_CYAN    0x07FF
+#define ILI9340_MAGENTA 0xF81F
+#define ILI9340_YELLOW  0xFFE0
+#define ILI9340_WHITE   0xFFFF
+
+int ili9340_fill_color(uint16_t color);
+int ili9340_init();
+
