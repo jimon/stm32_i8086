@@ -11,6 +11,11 @@ int main(void)
 	ili9340_init();
 	ili9340_fill_color(ILI9340_BLUE);
 
+	//for(int i = 0; i < 10; ++i)
+	//	ili9340_putc('0' + i, 50, 100 - 6 * i);
+
+	//ili9340_puts("HELLO WORLD\nTEST 123\nTEST TEST");
+
 	BSP_LED_Init(LED3);
 	BSP_LED_Init(LED4);
 	BSP_LED_Init(LED5);
@@ -18,13 +23,16 @@ int main(void)
 
 	while(1)
 	{
-		ili9340_fill_color(ILI9340_BLUE);
-		ili9340_fill_color(ILI9340_RED);
+		//ili9340_fill_color(ILI9340_BLUE);
+		//ili9340_fill_color(ILI9340_RED);
+
+		ili9340_putc('0' + rand()%10);
+
 		BSP_LED_Toggle(LED3);
-		BSP_LED_Toggle(LED4);
-		BSP_LED_Toggle(LED5);
-		BSP_LED_Toggle(LED6);
-		//HAL_Delay(1000);
+		//BSP_LED_Toggle(LED4);
+		//BSP_LED_Toggle(LED5);
+		//BSP_LED_Toggle(LED6);
+		//HAL_Delay(10);
 	}
 }
 

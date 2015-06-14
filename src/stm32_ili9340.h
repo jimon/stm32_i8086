@@ -22,5 +22,12 @@
 #define ILI9340_WHITE   0xFFFF
 
 int ili9340_fill_color(uint16_t color);
+int ili9340_bitmap(uint8_t * data, uint16_t data_size, uint16_t x, uint16_t y, uint16_t w, uint16_t h);
+int ili9340_bitmap_masked(uint8_t * data, uint16_t data_size, uint16_t mask_color, uint16_t x, uint16_t y, uint16_t w, uint16_t h);
+
+int ili9340_putc(char c);
+int ili9340_puts(char * str);
+int ili9340_clr(uint16_t color);
+
 int ili9340_init();
 
