@@ -22,12 +22,5 @@ int main(void)
 	if(i8086_init() != 0)
 		ili9340_puts("failed to init 8086\n");
 
-	while(1)
-	{
-		//BSP_LED_Toggle(LED3);
-		//BSP_LED_Toggle(LED4);
-		//BSP_LED_Toggle(LED5);
-		//BSP_LED_Toggle(LED6);
-		HAL_Delay(500);
-	}
+	i8086_poll();
 }
