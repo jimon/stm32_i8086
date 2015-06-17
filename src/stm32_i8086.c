@@ -206,13 +206,19 @@ void i8086_bus_write()
 
 // ----------------------------------------------- init
 
+#include "../rom/test_write.h"
+
+void load_code(uint8_t * data, uint32_t size);
+
 int i8086_init()
 {
+	HAL_Delay(100); // wait 50+ ms after power up
+
 	#ifdef CLK_PROPER_DUTY_CYCLE
 	dwt_init();
 	#endif
 
-	HAL_Delay(100); // wait 50+ ms after power up
+	load_code(test_write_bin, test_write_bin_size);
 
 	__HAL_RCC_GPIOA_CLK_ENABLE();
 	__HAL_RCC_GPIOB_CLK_ENABLE();
@@ -318,17 +324,24 @@ void i8086_debug_stop(const char * s, uint32_t waits)
 
 // ----------------------------------------------- memory simulation
 
-#include "../rom/test_write.h"
 
-#define rom_org 0x0
-#define rom_data test_write_bin
-#define rom_size test_write_bin_size
+/*
+memory map :
+
+code segment : 0x10000 - 0x17fff
+data segment : 0x20000 - 0x27fff
+reset vector : 0xffff0 - 0xfffff
+
+*/
+
+uint8_t code_segment[0x8000];
+uint8_t data_segment[0x8000];
 
 uint8_t reset_vector[] =
 {
-	0xea,
-	(rom_org >> 0) & 0xff, // offset low
-	(rom_org >> 8) & 0xff, // offset high
+	0xea, // direct intersegment jmp
+	0x00, // offset low
+	0x00, // offset high
 	0x00, // segment low
 	0x10, // segment high
 
@@ -345,13 +358,20 @@ uint8_t reset_vector[] =
 	0x0
 };
 
+void load_code(uint8_t * data, uint32_t size)
+{
+	memcpy(code_segment, data, size);
+}
+
 uint16_t memory_read(uint32_t addr)
 {
 	uint16_t data = 0;
 	if(addr >= 0xffff0)
 		data = *(uint16_t*)(reset_vector + (addr - 0xffff0));
-	else if((addr >= 0x10000) && (addr < 0x10000 + rom_size + 1))
-		data = *(uint16_t*)(rom_data + (addr - 0x10000));
+	else if((addr >= 0x10000) && (addr <= 0x17fff))
+		data = *(uint16_t*)(code_segment + (addr - 0x10000));
+	else if((addr >= 0x20000) && (addr <= 0x27fff))
+		data = *(uint16_t*)(data_segment + (addr - 0x20000));
 	else
 		data = 0xf4; // halt
 	return data;
@@ -359,8 +379,14 @@ uint16_t memory_read(uint32_t addr)
 
 void memory_write(uint32_t addr, uint16_t data, uint16_t mask)
 {
-	kprintf("w%x=%x*%x\n", addr, data, mask);
-	return data;
+	uint16_t * ptr = 0;
+	if((addr >= 0x10000) && (addr <= 0x17fff))
+		ptr = (uint16_t*)(code_segment + (addr - 0x10000));
+	else if((addr >= 0x20000) && (addr <= 0x27fff))
+		ptr = (uint16_t*)(data_segment + (addr - 0x20000));
+	else
+		i8086_debug_stop("wrond write addr", 0);
+	*ptr = data & mask + (*ptr) & ~mask;
 }
 
 // ----------------------------------------------- polling loop
