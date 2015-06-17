@@ -4,6 +4,9 @@
 #include "stm32_i8086.h"
 #include <stdio.h>
 
+#include "../rom/test_write.h"
+#include "../rom/test_io.h"
+
 int main(void)
 {
 	HAL_Init();
@@ -15,6 +18,9 @@ int main(void)
 
 	if(i8086_init() != 0)
 		ili9340_puts("failed to init 8086\n");
+
+	//load_code(test_write_bin, test_write_bin_size);
+	i8086_load_code_segment(test_io_bin, test_io_bin_size);
 
 	i8086_poll();
 }

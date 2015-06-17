@@ -5,7 +5,6 @@ mov ax,2h
 mov di,ax
 mov ax, 5566h
 mov word [ds:di], ax
-a:
-mov ax,2
-jmp a
-db 'teeeest'
+waitloop:
+mov ax,0
+jmp waitloop

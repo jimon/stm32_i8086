@@ -5,33 +5,28 @@
 #include <stdio.h>
 #include <string.h>
 
-/*
-pin assignment :
-A00-A07		PA00-PA07 (in/out)
-A08-A09		PC04-PC05 (in/out)
-A10-A12		PB00-PB02 (in/out)
-A13-A15		PE07-PE09 (in/out)
-A16-A19		PE10-PE13 (in)
-INTA		PB03 (in)
-ALE			PD07 (in)
-DEN			PD06 (in)
-DT/R		PD05 (in)
-M/IO		PD04 (in)
-WR			PD03 (in)
-HLDA		PD02 (in)
-RD			PD00 (in)
-BHE			PE14 (in)
-INTR		PB08 (out)
-NMI			PB07 (out)
-RESET		PB06 (out)
-READY		PB05 (out)
-TEST		PB04 (out)
-HOLD		PD01 (out)
-CLK			PB09 (out)
-*/
-
-// simulate proper 33% duty cycle with milliseconds delay
-#define CLK_PROPER_DUTY_CYCLE
+// pin assignment :
+// A00-A07	PA00-PA07 (in/out)
+// A08-A09	PC04-PC05 (in/out)
+// A10-A12	PB00-PB02 (in/out)
+// A13-A15	PE07-PE09 (in/out)
+// A16-A19	PE10-PE13 (in)
+// INTA		PB03 (in)
+// ALE		PD07 (in)
+// DEN		PD06 (in)
+// DT/R		PD05 (in)
+// M/IO		PD04 (in)
+// WR		PD03 (in)
+// HLDA		PD02 (in)
+// RD		PD00 (in)
+// BHE		PE14 (in)
+// INTR		PB08 (out)
+// NMI		PB07 (out)
+// RESET	PB06 (out)
+// READY	PB05 (out)
+// TEST		PB04 (out)
+// HOLD		PD01 (out)
+// CLK		PB09 (out)
 
 // ----------------------------------------------- millisecond delay
 
@@ -206,10 +201,6 @@ void i8086_bus_write()
 
 // ----------------------------------------------- init
 
-#include "../rom/test_write.h"
-
-void load_code(uint8_t * data, uint32_t size);
-
 int i8086_init()
 {
 	HAL_Delay(100); // wait 50+ ms after power up
@@ -217,8 +208,6 @@ int i8086_init()
 	#ifdef CLK_PROPER_DUTY_CYCLE
 	dwt_init();
 	#endif
-
-	load_code(test_write_bin, test_write_bin_size);
 
 	__HAL_RCC_GPIOA_CLK_ENABLE();
 	__HAL_RCC_GPIOB_CLK_ENABLE();
@@ -324,16 +313,6 @@ void i8086_debug_stop(const char * s, uint32_t waits)
 
 // ----------------------------------------------- memory simulation
 
-
-/*
-memory map :
-
-code segment : 0x10000 - 0x17fff
-data segment : 0x20000 - 0x27fff
-reset vector : 0xffff0 - 0xfffff
-
-*/
-
 uint8_t code_segment[0x8000];
 uint8_t data_segment[0x8000];
 
@@ -358,7 +337,7 @@ uint8_t reset_vector[] =
 	0x0
 };
 
-void load_code(uint8_t * data, uint32_t size)
+void i8086_load_code_segment(const uint8_t * data, uint32_t size)
 {
 	memcpy(code_segment, data, size);
 }
