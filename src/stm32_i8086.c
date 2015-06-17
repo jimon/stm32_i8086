@@ -313,9 +313,6 @@ void i8086_debug_stop(const char * s, uint32_t waits)
 	}
 	while(true)
 	{
-		BSP_LED_Toggle(LED3);
-		HAL_Delay(400);
-		//i8086_wclk_ticks(100);
 	}
 }
 
@@ -357,8 +354,6 @@ uint16_t memory_read(uint32_t addr)
 		data = *((uint16_t*)rom_data + (addr - (0x10000 >> 1)));
 	else
 		data = 0xf4; // halt
-
-	//kprintf("r%x=%x\n", addr, data);
 	return data;
 }
 

@@ -499,6 +499,22 @@ int ili9340_init(uint8_t rotation, uint8_t inverted)
 	ILI9340_SPI_CLK_ENABLED();
 	ILI9340_GPIO_CLK_ENABLED();
 
+	GPIO_InitTypeDef  GPIO_InitStruct;
+	GPIO_InitStruct.Pin       = GPIO_PIN_13;
+	GPIO_InitStruct.Mode      = GPIO_MODE_AF_PP;
+	GPIO_InitStruct.Pull      = GPIO_PULLUP;
+	GPIO_InitStruct.Speed     = GPIO_SPEED_HIGH;
+	GPIO_InitStruct.Alternate = GPIO_AF5_SPI2;
+	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+	GPIO_InitStruct.Pin = GPIO_PIN_14;
+	GPIO_InitStruct.Alternate = GPIO_AF5_SPI2;
+	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+	GPIO_InitStruct.Pin = GPIO_PIN_15;
+	GPIO_InitStruct.Alternate = GPIO_AF5_SPI2;
+	HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
 	ili9340_spi.Instance				= ILI9340_SPI;
 	ili9340_spi.Init.BaudRatePrescaler	= SPI_BAUDRATEPRESCALER_2;
 	ili9340_spi.Init.Direction			= SPI_DIRECTION_2LINES;
