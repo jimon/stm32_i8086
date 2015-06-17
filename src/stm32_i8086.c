@@ -2,6 +2,8 @@
 #include "stm32f4xx_hal.h"
 #include "stm32_ili9340.h"
 #include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
 
 /*
 A00-A07		PA00-PA07
@@ -66,7 +68,7 @@ void i8086_wready(bool enabled)	{HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, enabled ? 
 void i8086_wtest(bool enabled)	{HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, enabled ? GPIO_PIN_SET : GPIO_PIN_RESET);}
 void i8086_whold(bool enabled)	{HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, enabled ? GPIO_PIN_SET : GPIO_PIN_RESET);}
 void i8086_wclk(bool enabled)	{HAL_GPIO_WritePin(GPIOB, GPIO_PIN_9, enabled ? GPIO_PIN_SET : GPIO_PIN_RESET);}
-void i8086_wdata8(uint8_t data)
+void i8086_wdata_0_7(uint16_t data)
 {
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, ((data >> 0) & 1) ? GPIO_PIN_SET : GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, ((data >> 1) & 1) ? GPIO_PIN_SET : GPIO_PIN_RESET);
@@ -77,9 +79,8 @@ void i8086_wdata8(uint8_t data)
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, ((data >> 6) & 1) ? GPIO_PIN_SET : GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, ((data >> 7) & 1) ? GPIO_PIN_SET : GPIO_PIN_RESET);
 }
-void i8086_wdata16(uint16_t data)
+void i8086_wdata_8_15(uint16_t data)
 {
-	i8086_data8(data);
 	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, ((data >>  8) & 1) ? GPIO_PIN_SET : GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_5, ((data >>  9) & 1) ? GPIO_PIN_SET : GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, ((data >> 10) & 1) ? GPIO_PIN_SET : GPIO_PIN_RESET);
@@ -88,6 +89,11 @@ void i8086_wdata16(uint16_t data)
 	HAL_GPIO_WritePin(GPIOE, GPIO_PIN_7, ((data >> 13) & 1) ? GPIO_PIN_SET : GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(GPIOE, GPIO_PIN_8, ((data >> 14) & 1) ? GPIO_PIN_SET : GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(GPIOE, GPIO_PIN_9, ((data >> 15) & 1) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+}
+void i8086_wdata_0_15(uint16_t data)
+{
+	i8086_wdata_0_7(data);
+	i8086_wdata_8_15(data);
 }
 
 bool i8086_rinta()		{return HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_3) == GPIO_PIN_SET;}
@@ -129,7 +135,6 @@ void i8086_wclk_redge() {i8086_wclk(true);}
 void i8086_wclk_up_wait() {delay_us(tick_delay);}
 void i8086_wclk_fedge() {i8086_wclk(false);}
 void i8086_wclk_down_wait() {delay_us(tick_delay * 2);}
-
 void i8086_wclk_ticks(uint32_t ticks)
 {
 	for(uint32_t i = 0; i < ticks; ++i)
@@ -140,7 +145,6 @@ void i8086_wclk_ticks(uint32_t ticks)
 		i8086_wclk_fedge();
 	}
 }
-
 
 void i8086_bus_read()
 {
@@ -156,7 +160,6 @@ void i8086_bus_read()
 	i8086_init_bus.Pin = GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9;
 	HAL_GPIO_Init(GPIOE, &i8086_init_bus);
 }
-
 void i8086_bus_write()
 {
 	GPIO_InitTypeDef i8086_init_bus;
@@ -173,8 +176,6 @@ void i8086_bus_write()
 	i8086_init_bus.Pin = GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9;
 	HAL_GPIO_Init(GPIOE, &i8086_init_bus);
 }
-
-
 
 int i8086_init()
 {
@@ -226,7 +227,7 @@ int i8086_init()
 	i8086_wnmi(false);
 	i8086_wintr(false);
 	i8086_wready(true);
-	i8086_wtest(false);
+	i8086_wtest(true);
 	i8086_whold(false);
 	i8086_wclk(false);
 	i8086_wreset(true);
@@ -243,11 +244,11 @@ int i8086_init()
 
 uint8_t reset_vector[] =
 {
-	0b11101010, // JMP Direct Intersegment
-	0x0, // offset low
-	0x0, // offset high
-	0x80, // seg low
-	0x0,  // seg high
+	0xea,
+	0x10, // offset low
+	0x20, // offset high
+	0x30, // seg low
+	0x40,  // seg high
 
 	0x0,
 	0x0,
@@ -262,6 +263,14 @@ uint8_t reset_vector[] =
 	0x0,
 };
 
+uint16_t memory_read(uint32_t addr)
+{
+	if(addr >= 0x7fff8)
+		return *((uint16_t*)reset_vector + (addr - 0x7fff8));
+	else
+		return 0xf4; // halt
+}
+
 #define kprintf(format, ...) \
 { \
 	char temp[128]; \
@@ -269,10 +278,22 @@ uint8_t reset_vector[] =
 	ili9340_puts(temp); \
 }
 
-void i8086_debug()
+typedef struct
+{
+	uint32_t addr;
+	bool bhe;
+	bool rd;
+} history_op;
+
+history_op history[16];
+uint32_t history_ptr = 0;
+
+void i8086_debug(const char * s, uint32_t waits)
 {
 	char temp[128];
-	sprintf(temp, "inta%i ale%i den%i dtr%i mio%i\nwr%i hlda%i rd%i bhe%i addr0x%x\n",
+	sprintf(temp, "%s [%i] inta%i ale%i den%i dtr%i mio%i\nwr%i hlda%i rd%i bhe%i addr0x%x\n",
+		s,
+		waits,
 		i8086_rinta(),
 		i8086_rale(),
 		i8086_rden(),
@@ -284,71 +305,104 @@ void i8086_debug()
 		i8086_rbhe(),
 		i8086_raddr());
 	ili9340_puts(temp);
+	for(uint32_t i = 0; i < 16; ++i)
+	{
+		sprintf(temp, "%x %i %i\n", history[i].addr, history[i].bhe, history[i].rd);
+		ili9340_puts(temp);
+	}
+	while(true)
+	{
+		BSP_LED_Toggle(LED3);
+		//HAL_Delay(400);
+		i8086_wclk_ticks(1);
+	}
 }
-
+unsigned char reverse(unsigned char b) {
+   b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
+   b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
+   b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
+   return b;
+}
 void i8086_poll()
 {
 	uint8_t cycle = 1;
 
 	uint32_t latched_addr = 0;
-	bool rd = false, wd = false;
+	bool latched_bhe = false;
+	bool rd = false;
 
-	uint32_t history[16];
-	memset(history, 0, 16 * 4);
-	uint32_t history_ptr = 0;
+	uint32_t debug_ale_waits = 0;
+	uint32_t debug_rdwr_waits = 0;
+	uint32_t debug_rdwr2_waits = 0;
 
-	uint32_t lool = 0;
-	uint32_t lool2 = 0;
+	i8086_bus_read();
 
 	while(true)
 	{
+		i8086_wnmi(false);
+		i8086_wintr(false);
+		i8086_wready(true);
+		i8086_wtest(true);
+		i8086_whold(false);
+		i8086_wreset(false);
+
 		switch(cycle)
 		{
 		case 1: // T1, wait for ale
-			i8086_bus_read();
 			i8086_wclk_down_wait();
-			i8086_wclk_redge();
+
 			if(i8086_rale())
 			{
-				cycle = 2;
 				latched_addr = i8086_raddr();
+				latched_bhe = i8086_rbhe();
 
-				history[history_ptr] = latched_addr;
-				history_ptr = (history_ptr + 1) % 16;
-				kprintf("%i\n", lool);
-				lool=0;
+				history[history_ptr].addr = latched_addr;
+				history[history_ptr].bhe = latched_bhe;
+
+				cycle = 2;
+				debug_rdwr_waits = 0;
+
+				//if(debug_ale_waits)
+				//	i8086_debug("T1: ale waits", debug_ale_waits);
 			}
 			else
 			{
-				lool++;
-				//kprintf("T1: no ale\n");
-				//i8086_debug();
-				//while(true){}
+				debug_ale_waits++;
+
+				if(debug_ale_waits > 100)
+					i8086_debug("T1: ale waits", debug_ale_waits);
 			}
+
+			i8086_wclk_redge();
 			i8086_wclk_up_wait();
 			i8086_wclk_fedge();
 			break;
 		case 2: // T2, wait for RD or WD
-			i8086_bus_read();
 			i8086_wclk_down_wait();
 			i8086_wclk_redge();
+
 			rd = false;
-			wd = false;
 			if(!i8086_rrd())
 			{
-				cycle = 3;
 				rd = true;
-				i8086_wready(false);
-				//kprintf("T2: rd\n");
-			}
-			if(!i8086_rwr())
-			{
 				cycle = 3;
-				wd = true;
-				i8086_wready(false);
-				kprintf("T2: wd\n");
-				while(true){}
+				history[history_ptr].rd = true;
+
+				if(debug_rdwr_waits)
+					i8086_debug("T2: rdwr waits", debug_rdwr_waits);
 			}
+			else if(!i8086_rwr())
+			{
+				history[history_ptr].rd = false;
+				i8086_debug("T2: wr?", 0);
+			}
+			else
+			{
+				debug_rdwr_waits++;
+				if(debug_rdwr_waits > 100)
+					i8086_debug("T2: rdwr waits", debug_rdwr_waits);
+			}
+
 			i8086_wclk_up_wait();
 			i8086_wclk_fedge();
 			break;
@@ -356,27 +410,30 @@ void i8086_poll()
 			if(rd)
 			{
 				i8086_bus_write();
-				if(latched_addr >= 0xffff0)
-				{
-					i8086_wdata8(reset_vector[latched_addr - 0xffff0]);
-				}
-				else
-				{
-					kprintf("---\n");
-					for(int i = 0; i < 16; ++i)
-					{
-						kprintf("%x\n", history[i]);
-					}
 
-					while(true){}
-				}
 				i8086_wclk_down_wait();
+
+				uint8_t a0 = latched_addr & 1;
+				uint32_t addr = latched_addr >> 1;
+
+				uint16_t data = memory_read(addr);
+
+				if((latched_bhe == 0) && (a0 == 0))
+					i8086_wdata_0_15(data);
+				else if((latched_bhe == 0) && (a0 == 1))
+					i8086_wdata_8_15(data);
+				else if((latched_bhe == 1) && (a0 == 0))
+					i8086_wdata_0_7(data);
+				else if((latched_bhe == 1) && (a0 == 1))
+				{
+				}
+
 				i8086_wclk_redge();
-				delay_us(100);
-				i8086_wready(true);
 				i8086_wclk_up_wait();
 				i8086_wclk_fedge();
+
 				cycle = 4;
+				debug_rdwr2_waits = 0;
 			}
 			break;
 		case 4:
@@ -388,26 +445,23 @@ void i8086_poll()
 			{
 				if(i8086_rrd())
 				{
+					i8086_bus_read();
+					history_ptr = (history_ptr + 1) % 16;
 					cycle = 1;
-					//kprintf("T4: !rd\n");
-					kprintf("T4: %i\n", lool2);
+					debug_ale_waits = 0;
+
+					if(debug_rdwr2_waits)
+						i8086_debug("T4: rdwr2 waits", debug_rdwr2_waits);
 				}
 				else
 				{
-					lool2++;
-					//kprintf("T4: ?\n");
-					//i8086_debug();
-					//while(true){}
-
+					debug_rdwr2_waits++;
+					if(debug_rdwr2_waits > 100)
+						i8086_debug("T2: rdwr2 waits", debug_rdwr2_waits);
 				}
 			}
 			else
-			{
-				kprintf("T4: 2 ?\n");
-				i8086_debug();
-				while(true){}
-			}
-
+				i8086_debug("T4: ?", 0);
 
 			i8086_wclk_fedge();
 			break;
