@@ -8,4 +8,4 @@ mov word [ds:di], ax
 a:
 mov ax,2
 jmp a
-; hlt
+db 'teeeest'

@@ -348,10 +348,10 @@ uint8_t reset_vector[] =
 uint16_t memory_read(uint32_t addr)
 {
 	uint16_t data = 0;
-	if(addr >= (0xffff0 >> 1))
-		data = *((uint16_t*)reset_vector + (addr - 0x7fff8));
-	else if((addr >= (0x10000 >> 1)) && (addr < ((0x10000 + rom_size) >> 1) + 1))
-		data = *((uint16_t*)rom_data + (addr - (0x10000 >> 1)));
+	if(addr >= 0xffff0)
+		data = *(uint16_t*)(reset_vector + (addr - 0xffff0));
+	else if((addr >= 0x10000) && (addr < 0x10000 + rom_size + 1))
+		data = *(uint16_t*)(rom_data + (addr - 0x10000));
 	else
 		data = 0xf4; // halt
 	return data;
@@ -476,7 +476,7 @@ void i8086_poll()
 				i8086_wclk_down_wait();
 
 				uint8_t a0 = latched_addr & 1;
-				uint32_t addr = latched_addr >> 1;
+				uint32_t addr = latched_addr & ~1;
 				uint16_t data = memory_read(addr);
 
 				if((latched_bhe == 0) && (a0 == 0))
@@ -503,7 +503,7 @@ void i8086_poll()
 				i8086_wclk_down_wait();
 
 				uint8_t a0 = latched_addr & 1;
-				uint32_t addr = latched_addr >> 1;
+				uint32_t addr = latched_addr & ~1;
 
 				if((latched_bhe == 0) && (a0 == 0))
 					memory_write(addr, i8086_rdata_0_15(), 0xffff);
