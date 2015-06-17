@@ -7,6 +7,10 @@
 // data segment : 0x20000 - 0x27fff
 // reset vector : 0xffff0 - 0xfffff
 
+// io ports :
+// 0x10 - put char on screen
+// 0x12 - return number char from 0 to 9
+
 #define CLK_PROPER_DUTY_CYCLE // simulate proper 33% duty cycle with milliseconds delay
 
 int i8086_init();

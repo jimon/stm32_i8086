@@ -368,6 +368,22 @@ void memory_write(uint32_t addr, uint16_t data, uint16_t mask)
 	*ptr = data & mask + (*ptr) & ~mask;
 }
 
+// ----------------------------------------------- io simulation
+
+uint16_t io_read(uint32_t addr)
+{
+	if(addr == 0x12)
+		return '0' + rand()%10;
+	else
+		return 0;
+}
+
+void io_write(uint32_t addr, uint16_t data, uint16_t mask)
+{
+	if(addr == 0x10)
+		ili9340_putc(data & 0xff);
+}
+
 // ----------------------------------------------- polling loop
 
 void i8086_poll()
@@ -378,8 +394,9 @@ void i8086_poll()
 	// latches
 	uint32_t latched_addr = 0;
 	bool latched_bhe = false;
-	bool rd = false;
-	bool wd = false;
+	bool latched_mio = false;
+	bool latched_rd = false;
+	bool latched_wr = false;
 
 	// debug
 	uint32_t debug_ale_waits = 0;
@@ -393,8 +410,8 @@ void i8086_poll()
 	{
 		debug_counter++;
 
-		if(debug_counter > 10000)
-			i8086_debug_stop("works", 0);
+		//if(debug_counter > 10000)
+		//	i8086_debug_stop("works", 0);
 
 		i8086_wnmi(false);
 		i8086_wintr(false);
@@ -413,6 +430,7 @@ void i8086_poll()
 			{
 				latched_addr = i8086_raddr();
 				latched_bhe = i8086_rbhe();
+				latched_mio = i8086_rmio();
 
 				history[history_ptr].addr = latched_addr;
 				history[history_ptr].bhe = latched_bhe;
@@ -438,12 +456,12 @@ void i8086_poll()
 			i8086_wclk_down_wait();
 			i8086_wclk_redge();
 
-			rd = false;
-			wd = false;
+			latched_rd = false;
+			latched_wr = false;
 
 			if(!i8086_rrd())
 			{
-				rd = true;
+				latched_rd = true;
 				cycle = 3;
 				history[history_ptr].rd = true;
 				history[history_ptr].wr = false;
@@ -453,7 +471,7 @@ void i8086_poll()
 			}
 			else if(!i8086_rwr())
 			{
-				wd = true;
+				latched_wr = true;
 				cycle = 3;
 				history[history_ptr].rd = false;
 				history[history_ptr].wr = true;
@@ -474,15 +492,18 @@ void i8086_poll()
 		}
 		case 3:
 		{
-			if(rd)
+			if(latched_rd)
 			{
+				// somehow i8086 is extremely sensetive to latency when reading
+				// so try not to do anything fancy here (like printing to a screen, or etc)
+
 				i8086_bus_write(); // bus will switch back to read at the next cycle
 
 				i8086_wclk_down_wait();
 
 				uint8_t a0 = latched_addr & 1;
 				uint32_t addr = latched_addr & ~1;
-				uint16_t data = memory_read(addr);
+				uint16_t data = latched_mio ? memory_read(addr) : io_read(addr);
 
 				if((latched_bhe == 0) && (a0 == 0))
 					i8086_wdata_0_15(data);
@@ -502,23 +523,38 @@ void i8086_poll()
 				cycle = 4;
 				debug_rdwr2_waits = 0;
 			}
-
-			if(wd)
+			else if(latched_wr)
 			{
 				i8086_wclk_down_wait();
 
 				uint8_t a0 = latched_addr & 1;
 				uint32_t addr = latched_addr & ~1;
 
-				if((latched_bhe == 0) && (a0 == 0))
-					memory_write(addr, i8086_rdata_0_15(), 0xffff);
-				else if((latched_bhe == 0) && (a0 == 1))
-					memory_write(addr, i8086_rdata_8_15(), 0xff00);
-				else if((latched_bhe == 1) && (a0 == 0))
-					memory_write(addr, i8086_rdata_0_7(),  0x00ff);
-				else if((latched_bhe == 1) && (a0 == 1))
+				if(latched_mio)
 				{
-					// do nothing
+					if((latched_bhe == 0) && (a0 == 0))
+						memory_write(addr, i8086_rdata_0_15(), 0xffff);
+					else if((latched_bhe == 0) && (a0 == 1))
+						memory_write(addr, i8086_rdata_8_15(), 0xff00);
+					else if((latched_bhe == 1) && (a0 == 0))
+						memory_write(addr, i8086_rdata_0_7(),  0x00ff);
+					else if((latched_bhe == 1) && (a0 == 1))
+					{
+						// do nothing
+					}
+				}
+				else
+				{
+					if((latched_bhe == 0) && (a0 == 0))
+						io_write(addr, i8086_rdata_0_15(), 0xffff);
+					else if((latched_bhe == 0) && (a0 == 1))
+						io_write(addr, i8086_rdata_8_15(), 0xff00);
+					else if((latched_bhe == 1) && (a0 == 0))
+						io_write(addr, i8086_rdata_0_7(),  0x00ff);
+					else if((latched_bhe == 1) && (a0 == 1))
+					{
+						// do nothing
+					}
 				}
 
 				i8086_wclk_redge();
@@ -537,7 +573,7 @@ void i8086_poll()
 			i8086_wclk_redge();
 			i8086_wclk_up_wait();
 
-			if(rd)
+			if(latched_rd)
 			{
 				if(i8086_rrd())
 				{
@@ -556,7 +592,7 @@ void i8086_poll()
 						i8086_debug_stop("T2: rdwr2 waits", debug_rdwr2_waits);
 				}
 			}
-			else if(wd)
+			else if(latched_wr)
 			{
 				if(i8086_rwr())
 				{
