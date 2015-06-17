@@ -1,4 +1,5 @@
 .
+..\rom\
 env_f407xx
 C:\work\stm32_8086\src\env_f407xx
 C:\work\stm32\STM32Cube_FW_F4_V1.4.0\Drivers\STM32F4xx_HAL_Driver\Inc

@@ -104,6 +104,8 @@ sources = {}
 find_files(stm32cubef4_drivers, include_dirs, sources)
 find_files(".", include_dirs, sources)
 
+include_dirs.add("../rom")
+
 if ".in" not in sources:
 	print("unable to find linker script template (_name_.ld.in), do not know how to link")
 	exit(1)
@@ -135,7 +137,7 @@ wr.comment("compiler flags")
 wr.variable("cpuflags", "-mcpu=cortex-m4 -mthumb -mlittle-endian -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb-interwork")
 wr.variable("optflags", "-O3 -fdata-sections -ffunction-sections -fsingle-precision-constant")
 wr.variable("debugflags", "-g")
-wr.variable("cflags", "$cpuflags $debugflags $optflags -std=c99 $defines $include_paths")
+wr.variable("cflags", "$cpuflags $debugflags $optflags -MP -MMD -std=c99 $defines $include_paths")
 wr.variable("ldflags", "$cpuflags $debugflags -O3 -T$linkerscript -Wl,--gc-sections --specs=rdimon.specs -lgcc -lc -lm -lrdimon")
 wr.variable("asflags", "$cpuflags $debugflags")
 

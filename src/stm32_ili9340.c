@@ -448,7 +448,7 @@ int ili9340_putc(char c)
 
 	int res = 0;
 	if(c != '\n')
-		res = ili9340_bitmap(slot, sizeof(slot), ili9340_cursor_x, ili9340_cursor_y, 5, 7);
+		res = ili9340_bitmap((uint8_t*)slot, sizeof(slot), ili9340_cursor_x, ili9340_cursor_y, 5, 7);
 
 	ili9340_cursor_x += 6;
 
@@ -468,7 +468,7 @@ int ili9340_putc(char c)
 				slot[i * 5 + j] = ILI9340_BLACK;
 
 		for(int x = ili9340_cursor_x; x < ili9340_width; x += 6)
-			res = ili9340_bitmap(slot, sizeof(slot), x, ili9340_cursor_y, 5, 7);
+			res = ili9340_bitmap((uint8_t*)slot, sizeof(slot), x, ili9340_cursor_y, 5, 7);
 	}
 
 	return res;

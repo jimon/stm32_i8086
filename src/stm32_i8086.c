@@ -241,14 +241,19 @@ int i8086_init()
 	return 0;
 }
 
+#include "../rom/test_write.h"
+
+#define rom_org 0x0
+#define rom_data test_write_bin
+#define rom_size test_write_bin_size
 
 uint8_t reset_vector[] =
 {
 	0xea,
-	0x10, // offset low
-	0x20, // offset high
-	0x30, // seg low
-	0x40,  // seg high
+	(rom_org >> 0) & 0xff, // offset low
+	(rom_org >> 8) & 0xff, // offset high
+	0x00, // segment low
+	0x10, // segment high
 
 	0x0,
 	0x0,
@@ -260,13 +265,15 @@ uint8_t reset_vector[] =
 	0x0,
 	0x0,
 	0x0,
-	0x0,
+	0x0
 };
 
 uint16_t memory_read(uint32_t addr)
 {
-	if(addr >= 0x7fff8)
+	if(addr >= (0xffff0 >> 1))
 		return *((uint16_t*)reset_vector + (addr - 0x7fff8));
+	else if((addr >= (0x10000 >> 1)) && (addr < ((0x10000 + rom_size) >> 1) + 1))
+		return *((uint16_t*)rom_data + (addr - (0x10000 >> 1)));
 	else
 		return 0xf4; // halt
 }
@@ -313,16 +320,11 @@ void i8086_debug(const char * s, uint32_t waits)
 	while(true)
 	{
 		BSP_LED_Toggle(LED3);
-		//HAL_Delay(400);
-		i8086_wclk_ticks(1);
+		HAL_Delay(400);
+		//i8086_wclk_ticks(1);
 	}
 }
-unsigned char reverse(unsigned char b) {
-   b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
-   b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
-   b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
-   return b;
-}
+
 void i8086_poll()
 {
 	uint8_t cycle = 1;
@@ -337,8 +339,15 @@ void i8086_poll()
 
 	i8086_bus_read();
 
+	uint32_t debug_counter = 0;
+
 	while(true)
 	{
+		debug_counter++;
+
+		if(debug_counter > 10000)
+			i8086_debug("hm", 0);
+
 		i8086_wnmi(false);
 		i8086_wintr(false);
 		i8086_wready(true);
@@ -401,6 +410,9 @@ void i8086_poll()
 				debug_rdwr_waits++;
 				if(debug_rdwr_waits > 100)
 					i8086_debug("T2: rdwr waits", debug_rdwr_waits);
+
+				//cycle = 1;
+				//debug_ale_waits = 0;
 			}
 
 			i8086_wclk_up_wait();
